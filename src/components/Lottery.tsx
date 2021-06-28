@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   List,
   ListItem,
@@ -20,11 +20,22 @@ import {
   NumberDecrementStepper,
 } from '@chakra-ui/react'
 import { StarIcon, SmallCloseIcon } from '@chakra-ui/icons'
+import { GoogleMap, LoadScript, Circle } from '@react-google-maps/api'
 
 export const Lottery: React.FC = () => {
   const [elements, setElements] = useState([])
   const [value, setValue] = useState(680)
   const [randomValue, setRandomValue] = useState(0)
+  const [center, setCenter] = useState({})
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition((position) => {
+      setCenter({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      })
+    })
+  }, [])
 
   const handleChange = (value) => setValue(value)
 
@@ -41,8 +52,26 @@ export const Lottery: React.FC = () => {
     setRandomValue(elements[randomIndex])
   }
 
-  const CalculationTaxiPrice = (price:number) => {
-    return ((price - 680) / 60 * 0.279 + 1.5).toFixed(1)
+  const CalculationTaxiPrice = (price: number) => {
+    return ((price - 680) / 60) * 0.279 + 1.5
+  }
+
+  const containerStyle = {
+    width: '600px',
+    height: '400px',
+  }
+
+  const circleOptions = {
+    strokeColor: '#FF0000',
+    strokeOpacity: 0.8,
+    strokeWeight: 2,
+    fillColor: '#FF0000',
+    fillOpacity: 0.35,
+    clickable: false,
+    draggable: false,
+    editable: false,
+    visible: true,
+    zIndex: 1,
   }
 
   return (
@@ -90,14 +119,34 @@ export const Lottery: React.FC = () => {
       >
         抽選
       </Button>
-      {randomValue > 0 && <Box borderWidth="1px" borderRadius="lg" mt={3} p={3}>
-        <Stat>
-          <StatLabel>抽選結果</StatLabel>
-          <StatNumber>{randomValue}円</StatNumber>
-          <StatHelpText>({CalculationTaxiPrice(randomValue)}km)</StatHelpText>
-        </Stat>
-      </Box>}
-
+      {randomValue > 0 && (
+        <Box borderWidth="1px" borderRadius="lg" mt={3} mb={3} p={3}>
+          <Stat>
+            <StatLabel>抽選結果</StatLabel>
+            <StatNumber>{randomValue}円</StatNumber>
+            <StatHelpText>
+              ({CalculationTaxiPrice(randomValue).toFixed(1)}km)
+            </StatHelpText>
+          </Stat>
+        </Box>
+      )}
+      {center && (
+        <LoadScript googleMapsApiKey={process.env.GOOGLE_MAP_API_KEY}>
+          <GoogleMap
+            mapContainerStyle={containerStyle}
+            center={center}
+            zoom={13}
+          >
+            {randomValue && (
+              <Circle
+                center={center}
+                radius={CalculationTaxiPrice(randomValue) * 1000}
+                options={circleOptions}
+              />
+            )}
+          </GoogleMap>
+        </LoadScript>
+      )}
     </div>
   )
 }
